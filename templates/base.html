@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+{% load bootstrap_toolkit %}
+{% load url from future %}
+{% load staticfiles %}
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>BGI Online工具上传系统</title>
+    <meta name="description" content="">
+    <meta name="author" content="huangzehui">
+
+    {% bootstrap_stylesheet_tag %}
+    {% bootstrap_stylesheet_tag "responsive" %}
+
+    <style type="text/css">
+        body {
+            padding-top: 60px;
+        }
+    </style>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+     <script src="{% static "index.js" %}"></script>
+    {% bootstrap_stylesheet_tag %}
+
+    {% block extra_head %}
+
+    {% endblock %}
+
+</head>
+
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="brand" href={% url "tool-list-page" %}> BGI Online</a>
+
+            <ul class="navbar-nav navbar-left nav">
+                 <li ><a href="">Document</a></li>
+            </ul>
+
+            <div style="float: right">
+             <ul class="navbar-nav navbar-right nav">
+                {% if user %}
+                <li><a href="#">Welcome {{ user }}</a></li>
+                {% endif %}
+
+                 <li ><a href={% url 'atap.views.changepwd' %}>修改密码</a></li>
+                 <li ><a href={% url 'atap.views.logout' %}>登出</a>
+
+             </ul>
+         </div>
+
+        </div>
+    </div>
+</div>
+
+
+<div class="container">
+    {% bootstrap_messages %}
+
+    {% block content %}
+
+        {#  <h1><a href="{% url "accounts/login/" %}">登录</a></h1>#}
+
+    {% endblock %}
+
+    <p>
+    <hr>
+    </p>
+
+    <footer class="row">
+        <div class="span6">
+            <p>This is <a href="https://www.bgionline.com/">BGI online</a></p>
+        </div>
+        <div class="span6" style="text-align:right">
+            <p>
+                <a href="mailto:huangzehui@genomics.cn">Zehui Huang | </a> 2015 &copy;
+            </p>
+        </div>
+    </footer>
+
+
+</div>
+<!-- container -->
+
+</body>
+</html>

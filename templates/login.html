@@ -1,0 +1,78 @@
+{% load bootstrap_toolkit %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BGI Online工具开发系统</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://apps.bdimg.com/libs/bootstrap/3.3.0/css/bootstrap.min.css">
+    <script src="http://apps.bdimg.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="http://apps.bdimg.com/libs/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+{% if password_is_wrong %}
+    <div class="alert alert-error">
+        <button type="button" class="close" data-dismiss="alert">×</button>
+        <h4>错误!</h4>用户名或密码错误
+    </div>
+{% endif %}
+
+
+<div class="container">
+    <p> </p>
+
+    <p>
+    <hr>
+    </p>
+    <div class="jumbotron">
+        <h1 class="text-center text-info" contenteditable="true"> 华大流程工具发布系统</h1>
+        <p>
+        <hr>
+        </p>
+    </div>
+
+    <div class="row">
+        <div class="col-sm-7">
+            <h3>欢迎</h3>
+            <p>The fool doth think he is wise, but the wise man knows himself to be a fool.</p>
+            <p>愚者自以为聪明，智者则有自知之明。</p>
+
+        </div>
+        <div class="col-sm-5" style="text-align: left">
+
+            <form class="form-horizontal" action="" method="post">
+                {% csrf_token %}
+                {{ form|as_bootstrap:"horizontal" }}
+                <p></p>
+                <p class="form-actions">
+                    <input type="submit" value="登录" class="btn btn-primary">
+                    <span >&nbsp;</span>
+                    <input type="button" value="忘记密码" class="btn btn-danger">
+                </p>
+            </form>
+        </div>
+    </div>
+
+
+    <p>
+    <hr>
+    </p>
+
+    <footer class="row">
+        <div class="span6">
+            <p>This is <a href="https://www.bgionline.com/">BGI online</a></p>
+        </div>
+        <div class="span6" style="text-align:right">
+            <p>
+                 <a href="mailto:huangzehui@genomics.cn">Zehui Huang | </a> 2015 &copy;
+            </p>
+        </div>
+    </footer>
+
+
+</div>
+
+
+</body>
+</html>

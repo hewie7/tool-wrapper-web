@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% load bootstrap_toolkit %}
+
+{% block extra_head %}
+{{ form.media }}
+<script src="{% static "refs.js" %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row-fluid">
+        <div class="span12">
+            <a href={% url "tool-detail-page" tool.id %}><h1>{{ tool.name }}</h1></a>
+            <h2>/Input/{{form.initial.identifier}}</h2>
+
+            <hr />
+        </div>
+    </div>
+
+    <div class="row-fluid">
+
+        <div class="col-xs-6 span9">
+            <form enctype="multipart/form-data" class="form-horizontal" action=" " method="post">
+                {% csrf_token %}
+                {{ form|as_bootstrap:"horizontal" }}
+                <!--{{ form.as_table }}-->
+                <hr/>
+                <div class="text-center ">
+                    <p class="form-action">
+                    <a href={% url "tool-detail-page" tool.id %}><input type="button" value="Cancal" class="btn btn-warning btn-large"></a>
+                    <span style="font-size:12px;">&nbsp;&nbsp;&nbsp;</span>
+                    <input type="submit" value="Save" class="btn btn-primary btn-large">
+                    </p>
+                </div>
+            </form>
+
+
+        </div>
+        <div class="col-xs-6 span3" >
+            <strong>public references:</strong>
+            <hr/>
+            {% for ref in refs %}
+            <span style="cursor: pointer;padding: 5px 20px 5px 20px" class="label badge-success" ><big>{{ref}}</big></span>
+            <br />
+            <p></p>
+            {% endfor %} 
+            <hr/>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+{% endblock %}
+

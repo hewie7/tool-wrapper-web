@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load bootstrap_toolkit %}
+{% block extra_head %}
+    {{ form.media }}
+{% endblock %}
+
+{% block content %}
+
+
+    <h2 class="">Tool: {{ tool.name }}</h2>
+    <h3><i class=" icon-download-alt"></i>{{ wd }}</h3>
+    <!--<span style="font-size:20px;">&nbsp;&nbsp;&nbsp;</span>-->
+    <div class="text-right">
+
+     <input style="float: left" type="file" name="myfiles" multiple="">
+
+     {% ifequal tool.state "pending" %}
+     <a href={% url "tool-modify-page" tool.id %}><input type="button" value="change" class="btn btn-warning"></a>
+     <span>&nbsp;</span>
+     <a href={% url "init-tool" tool.id %}><input type="button" value="Init" class="btn btn-success"></a>
+     {% endifequal %}
+     {% ifequal tool.state "inited" %}
+     <a href={% url "tool-modify-page" tool.id %}><input type="button" value="change" class="btn btn-warning"></a>
+     <span>&nbsp;</span>
+     <a href={% url "init-tool" tool.id %}><input type="button" value="Update" class="btn btn-info"></a>
+     {% endifequal %}
+ </div>
+ <hr/>
+
+ <div class="container-fluid">
+     <div class="row-fluid">
+         <div class="span12">
+             <table class="table">
+                 <thead>
+                 </thead>
+                 <tbody>
+                 <tr>
+                     <td>Program</td>
+                     <td>{{ tool.program }}</td>
+                 </tr>
+                 <tr>
+                     <td>Version</td>
+                     <td>{{ tool.version }}</td>
+                 </tr>
+
+                 <tr>
+                     <td>Author</td>
+                     <td>{{ tool.author }}</td>
+                 </tr>
+                 <tr>
+                     <td>Create At</td>
+                     <td>{{ tool.create_time }}</td>
+                 </tr>
+                 <tr>
+                     <td>Last Modify</td>
+                     <td>{{ tool.modify_time }}</td>
+                 </tr>
+                 <tr>
+                     <td>Description</td>
+                     <td>{{ tool.description }}</td>
+                 </tr>
+                 </tbody>
+             </table>
+             <hr/>
+
+         </div>
+         <div class="row-fluid">
+             <div class="span4">
+                 <table class="table table-bordered">
+                     <thead>
+                         <tr>
+                             <th><h2>Inputs</h2></th>
+                         </tr>
+                     </thead>
+                     <tbody>
+                     {% if inputs %}
+                     {% for input in inputs %}
+                     <tr class="">
+                         <td><a href={% url "input-modify-page" tool.id input.id %}>{{ input.name }}</a>
+                             <span>&nbsp;<a href={% url "input-delete-page" tool.id input.id %} style="float: right"><i class=" icon-trash" style="float:right"></i></a></span>
+                             {% if input.list %}    
+                             <span>&nbsp;<i class="icon-list" style="float:right"></i></span>
+                             {% else %}
+                             <i class="icon-file" style="float:right"></i>
+
+                             {% endif %}
+
+                             {% if input.required %}    
+                             <i class=" icon-ok-circle" style="float:right"></i> 
+                             {% else %}
+                             <i class="icon-ban-circle" style="float:right"></i>
+                             {% endif %}
+                        <br />
+                        <i style="color: #CFCACB">{{input.identifier }}</i>
+
+                         </td>
+
+                     </tr>
+                     {% endfor %}
+                     {% endif %}
+                     <tr>
+                         <td>
+                             <span style="float: right"><a href={% url "input-add-page" tool.id %}>+ add</a></span>
+                         </td>
+                     </tr>
+
+                     </tbody>
+                 </table>
+
+
+             </div>
+             {#            <div class="span3">#}
+                 {#                <table class="table table-bordered">#}
+                     {#                    <thead>#}
+                         {#                    <tr>#}
+                             {#                        <th><h2>References</h2></th>#}
+                             {#                    </tr>#}
+                         {#                    </thead>#}
+                     {#                    <tbody>#}
+                     {#                    <!--todo-->#}
+                     {#                    <tr class="sucess">#}
+                         {#                        <td><a style="float: right" href={% url "param-add-page" tool.id %}>+ add</a></td>#}
+                         {#                    </tr>#}
+                     {#                    </tbody>#}
+                     {#                </table>#}
+                 {#            </div>#}
+             <div class="span4">
+                 <table class="table table-bordered">
+                     <thead>
+                         <tr>
+                             <th><h2>Params</h2></th>
+                         </tr>
+                     </thead>
+                     <tbody>
+
+                     {% if params %}
+                     {% for param in params %}
+                     <tr class="">
+                         <td><a href={% url "param-modify-page" tool.id param.id %}>{{ param.name }}</a>
+                             <span ><a href={% url "param-delete-page" tool.id param.id %}><i class=" icon-trash" style="float:right"></i></a></span>
+
+                             {% if param.required %}    
+                             <i class=" icon-ok-circle" style="float:right"></i> 
+                             {% else %}
+                             <i class="icon-ban-circle" style="float:right"></i>
+                             {% endif %}
+                        <br />
+                        <i style="color: #CFCACB">{{ param.identifier }}</i>
+                         </td>
+                     </tr>
+                     {% endfor %}
+                     {% endif %}
+                     <tr class="sucess">
+                         <td><a style="float: right" href={% url "param-add-page" tool.id %}>+ add</a></td>
+                     </tr>
+                     </tbody>
+                 </table>
+
+             </div>
+             <div class="span4">
+                 <table class="table table-bordered">
+                     <thead>
+                         <tr>
+                             <th><h2>Outputs</h2></th>
+                         </tr>
+                     </thead>
+                     <tbody>
+
+                     {% if outputs %}
+                     {% for output in outputs %}
+                     <tr class="">
+                         <td><a href={% url "output-modify-page" tool.id output.id %}>{{ output.name }}</a>
+                             <span><a href={% url "output-delete-page" tool.id output.id %} style="float: right"><i class=" icon-trash" style="float:right"></i></a></span>
+
+                             {% if output.list%}    
+                             <i class=" icon-list" style="float:right"></i> 
+                             {% else %}
+                             <i class="icon-file" style="float:right"></i>
+                             {% endif %}
+
+                             {% if output.required %}    
+                             <i class=" icon-ok-circle" style="float:right"></i> 
+                             {% else %}
+                             <i class="icon-ban-circle" style="float:right"></i>
+                             {% endif %}
+                        <br />
+                        <i style="color: #CFCACB">{{ output.identifier }}</i>
+                             
+                         </td>
+
+
+
+
+
+
+
+                     </tr>
+
+                    
+
+
+
+                     {% endfor %}
+                     {% endif %}
+                     <tr class="sucess">
+                         <td><a style="float: right" href={% url "output-add-page" tool.id %}>+ add</a></td>
+                     </tr>
+                     </tbody>
+                 </table>
+
+
+             </div>
+
+         </div>
+     </div>
+ </div>
+ {% endblock %}

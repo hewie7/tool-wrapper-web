@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load bootstrap_toolkit %}
+
+{% block extra_head %}
+{{ form.media }}
+{% endblock %}
+
+{% block content %}
+     <a href={% url "tool-detail-page" tool.id %}><h1>{{ tool.name }}</h1></a>
+    <h2>/Param/</h2>
+
+    <form enctype="multipart/form-data" class="form-horizontal" action=" " method="post">
+    {% csrf_token %}
+    {{ form|as_bootstrap:"horizontal" }}
+    {% ifequal param.type "integer" %}
+    <div class="control-group required integer">
+        <label class="control-label" for="id_name">min,max</label>
+        <div class="controls">
+         <input  name="integer_min" type=number step=0.1 value="{{ param.min_value }}"/>
+         <input  name="integer_max" type=number step=0.1 value="{{ param.max_value }}"/>
+     </div>
+     </div>
+     {% endifequal %}
+
+    {% ifequal param.type "real" %}
+    <div class="control-group required real">
+        <label class="control-label" for="id_name">min,max</label>
+        <div class="controls">
+         <input  name="integer_min" type=number step=0.1 value="{{ param.min_value }}"/>
+         <input  name="integer_max" type=number step=0.1 value="{{ param.max_value }}"/>
+     </div>
+     </div>
+     {% endifequal %}
+
+    {% ifequal param.type "enum" %}
+        {% for v,n,d in enums %}
+    <div class="control-group required enum">
+        <label class="control-label" for="id_name">value,name,description</label>
+        <div class="controls">
+            <input stype="width:50px" type="text" name="enum_valu" value="{{ v }}" />
+            <input stype="width:50px" type="text" name="enum_name"  value="{{ n }}" />
+            <input stype="width:50px" type="text" name="enum_desc" value="{{ d }}"/>
+         &nbsp;&nbsp; <a href="javascript:;" onclick="$(this).parent().parent().remove()"  id="remove-enum" ><i class="icon-minus"></i></a>
+         </div>
+     </div>
+         {% endfor %}
+     <a href="javascript:;" onclick="add_enum()"  id="add-enum" >&nbsp;&nbsp;<i class="icon-plus"></i></a>
+     {% endifequal %}
+
+    <p class="form-action" align="center" >
+        <a href={% url "tool-detail-page" tool.id %}><input type="button" value="Cancal" class="btn btn-warning btn-large"></a>
+        <span style="font-size:12px;">&nbsp;&nbsp;&nbsp;</span>
+        <input type="submit" value="Save" class="btn btn-primary btn-large">
+    </p>
+    </form>
+
+{% endblock %}
+

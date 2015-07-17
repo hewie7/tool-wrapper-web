@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load bootstrap_toolkit %}
+
+{% block content %}
+    <h1>工具列表</h1>
+    <hr />
+    <table>
+        <tr>
+        <form action="" method="get">
+            <input placeholder="搜索任意字段" name="query" method="get" >
+            <span style="width:50px;">&nbsp;</span>
+            <input type="submit" value="search" class="btn btn-small">
+        </form>
+        <a href="/tool/add/"><input type="button" name="create" value="添加新工具" class="btn btn-success " style="float: right"></a>
+
+            </tr>
+    </table>
+    <br/>
+    <table class="table table-striped table-hover">
+        <tr>
+            <td><strong>工具名称</strong></td>
+            <td><strong>程序</strong></td>
+            <td><strong>描述</strong></td>
+            <td><strong>版本</strong></td>
+            <td><strong>作者</strong></td>
+            <td><strong>创建时间</strong></td>
+            <td><strong>修改时间</strong></td>
+            <td><strong style="">Actions</strong></td>
+        </tr>
+        {% for line in lines %}
+            <tr>
+                <td><a href="{% url "tool-detail-page" line.id %}">{{ line.name }}</a> </td>
+                <td><a href="">{{ line.program }}</a> </td>
+                <td>{{ line.description|truncatechars:9 }}</td>
+                <td>{{ line.version }}</td>
+                <td>{{ line.author }}</td>
+                <td>{{ line.create_time }}</td>
+                <td>{{ line.modify_time }}</td>
+                <td>
+                    {% ifequal line.state "pending" %}
+                        <a href={% url "init-tool" line.id %}><input type="button" name="init" value="创建" class="btn btn-success btn-mini"></a>
+                    {% endifequal %}
+                    {% ifequal line.state "inited" %}
+                        <input type="button" name="view" value="更新" class="btn btn-info btn-mini disabled">
+                    {% endifequal %}
+                    <a href="javascript:;"><input type="button" name="delete" onclick="r_confirm('{% url "del-tool" line.id %}')" value="删除" class="btn btn-danger btn-mini"></a>
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+
+    {% bootstrap_pagination lines url="/tools?page=1"%}
+
+{% endblock %}

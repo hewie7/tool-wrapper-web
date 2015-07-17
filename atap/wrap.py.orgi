@@ -1,0 +1,320 @@
+import sys
+import os
+from .models import *
+import re
+
+CODE_INDENT_INDEX = 0
+WHITE_SPACE = " " * 4
+MULTI_LINE_SEP = '^'
+
+#DEBUG = True
+DEBUG =False
+
+
+def compose(f=sys.stdout, snippets="", indent=False, retract=False, newline=True, interval=1):
+    global CODE_INDENT_INDEX
+    assert not(indent and retract)
+
+    codes = snippets.split(MULTI_LINE_SEP)
+    if indent:
+        CODE_INDENT_INDEX = CODE_INDENT_INDEX + 1
+    if retract:
+        CODE_INDENT_INDEX = CODE_INDENT_INDEX - 1
+
+    whitespaces = CODE_INDENT_INDEX * WHITE_SPACE
+
+    for index in range(len(codes)):
+        if index >= 1:
+            f.write("\n")
+        f.write(whitespaces + codes[index])
+
+    if newline:
+        f.write("\n"*interval)
+
+
+def code_generator(wd, tool_id):
+    global CODE_INDENT_INDEX
+    CODE_INDENT_INDEX = 0
+    tool = Tool.objects.get(id=tool_id)
+    inputs = tool.input_set.all().filter(deleted=0)
+    params = tool.param_set.all().filter(deleted=0)
+    outputs = tool.output_set.all().filter(deleted=0)
+
+    if DEBUG:
+        f = sys.stdout
+    else:
+        wrapper_name = tool.name.lower() + ".py"
+        f = open(os.path.join(wd, tool.name.lower(), wrapper_name),"w")
+
+    compose(f, "import os")
+    compose(f, "import sys")
+    compose(f, "import glob")
+    compose(f, "import re")
+    compose(f, "from l3sdk import define, Process,require", interval=2)
+    compose(f, "@require(mem_mb=%s, cpu=%s, high_io=%s)" % (tool.mem, tool.cpu, bool(tool.io)), interval=3)
+
+    compose(f, "class %s(define.Wrapper):" % tool.name.upper())
+
+    # inputs
+    if len(inputs) > 0:
+        compose(f, 'class Inputs(define.Inputs):', indent=True)
+        compose(f, indent=True)
+        for i in inputs:
+            i.description = i.description.replace(r"\r","")
+            define_str = """%s = define.input(name=\"\"\"%s\"\"\", description=\"\"\"%s\"\"\", required=%s, list=%s)""" % \
+                         (i.identifier, i.name, i.description, bool(i.required), bool(i.list))
+            compose(f, define_str)
+    else:
+        compose(f, 'class Inputs(define.Inputs):', indent=True)
+        compose(f, indent=True)
+        compose(f, "pass")
+
+    # outputs
+    compose(f, "", retract=True)
+    if len(outputs) > 0:
+        compose(f, 'class Outputs(define.Outputs):')
+        compose(f,indent=True)
+        for o in outputs:
+            o.description = o.description.replace(r"\r","")
+            define_str = """%s = define.output(name=\"\"\"%s\"\"\", description=\"\"\"%s\"\"\", required=%s, list=%s)""" % \
+                         (o.identifier, o.name, o.description, bool(o.required), bool(o.list))
+            compose(f, define_str)
+    else:
+        compose(f, 'class Output(define.Outputs):')
+        compose(f, indent=True)
+        compose(f, "pass")
+
+    # params
+    compose(f, "", retract=True)
+    if len(params) > 0:
+        compose(f, 'class Params(define.Params):')
+        compose(f, indent=True)
+        for p in params:
+            default = ""
+            p.description = p.description.replace(r"\r","")
+            if p.type == "string":
+                default = """'%s'""" % p.default
+            elif p.type == "boolean":
+                if default in "True,true,False,false":
+                    default = default.capitalize()
+                else:
+                    default = bool(p.default)
+            else:
+                default = p.default
+            if p.type == "enum":
+                define_str = """%s = define.%s(%s, name=\"\"\"%s\"\"\", description=\"\"\"%s\"\"\", required=%s, default= %s)""" % \
+                         (p.identifier, p.type, p.enum_value, p.name, p.description, bool(p.required), default)
+            else:
+                define_str = """%s = define.%s(name=\"\"\"%s\"\"\", description=\"\"\"%s\"\"\", required=%s, default= %s)""" % \
+                         (p.identifier, p.type, p.name, p.description, bool(p.required), default)
+
+            compose(f, define_str)
+
+    # execute
+    compose(f, "", retract=True)
+    compose(f, "def execute(self):")
+
+    # config.txt
+    compose(f, """config = open("__config__.txt", "w")""", indent=True)
+    compose(f, """config.write("<cfg>\\n")""")
+    if len(inputs) > 0:
+        compose(f, """config.write("\\n[input]\\n")""")
+        for i in inputs:
+            i.description = i.description.replace(r"\r","")
+            if i.list:
+                compose(f, """# convert %s to list file""" % i.identifier)
+                compose(f, """list_file = open("__%s__.list","w")""" % i.identifier)
+                compose(f, """for i in self.inputs.%s:""" % i.identifier)
+                # metas
+                compose(f, """fields = [ "%s:%s" % (k,v) for k,v in i.meta.items()]""", indent=True)
+                compose(f, """list_file.write("%s\\t%s\\n" % (i, ','.join(fields)))""")
+                compose(f, """config.write("%s='__%s__.list'\\n")""" % (i.identifier, i.identifier), retract=True)
+                #compose(f, retract=True)
+            else:
+                compose(f, """config.write("%s=%%s\\n" %% self.inputs.%s)""" % (i.identifier, i.identifier))
+
+    if len(params) > 0:
+        compose(f, """config.write("\\n[params]\\n")""")
+        for p in params:
+            p.description = p.description.replace(r"\r","")
+            compose(f, """config.write("%%s=%%s\\n" %% ('%s', self.params.%s))""" % (p.identifier, p.identifier))
+
+    compose(f, "")
+    manifest = {}
+    ###########################
+    # {input1_prefix}.bam
+    # {I:input1_prefix}.bam
+    # {P:params1}.bam
+    # {I:input1[0]_prefix}_{P:param1}.vcf
+    # {M:sample}_{M:lib}_{M:lane}.vcf
+    # linrc.txt
+    # readme.txt
+    ##########################
+
+    ### $OUTPUT ###
+
+    if len(outputs) > 0:
+        compose(f, """config.write("\\n[outputs]\\n")""")
+        for o in outputs:
+            o.description = o.description.replace(r"\r","")
+            compose(f, "######## %s #######" % o.identifier)
+# > out dir
+            m1 = re.findall(r"{(\S):(\w+\[?\d?\]?\w*)}", o.outdir)
+            # plain text
+            if len(m1) == 0:
+                compose(f, """%s_dir_name = '%s'""" % (o.identifier, o.outdir))
+            else:
+                name_base = "%s_dir_name_base" % o.identifier
+                compose(f, """%s = []""" % name_base)
+                for c, n in m1:
+                    # inputs
+                    if "I" in c:
+                        if "__" in n:
+                            m = re.match(r"\S*:(\w+\[?\d?\]?\w*)__(\w+)", o.pattern)
+                            if m:
+                                pri = m.group(1)
+                                cov = m.group(2)
+                            # it's prefix of input file name
+                            if "prefix" in cov:
+                                compose(f, """%s.append(os.path.basename(self.inputs.%s).split(".")[0])""" % (name_base, pri))
+                            # it's meta
+                            else:
+                                compose(f, """%s.append(self.inputs.%s.meta.get('%s','NA'))""" % (name_base, pri, cov))
+                    # params
+                    elif "P" in c:
+                        compose(f, """%s.append(self.params.%s)""" % (name_base, n))
+                compose(f, """%s_dir_name = "_".join(%s)""" % (o.identifier, name_base))
+
+# > list file
+            if o.list:
+                # * , *.bam
+                if "*" in o.pattern:
+                    compose(f, """%s_dir_filename_s = os.path.join(%s_dir_name, "%s")""" % (o.identifier, o.identifier, o.pattern))
+                    manifest[o.identifier] = """glob.glob(%s_dir_filename_s)""" % o.identifier
+                    compose(f, """config.write("%s=%%s\\n" %% %s_dir_filename_s) """ % (o.identifier, o.identifier))
+                # 1.png 3.pdf
+                else:
+                    # todo refactor
+                    # extract pattern to filename function
+                    # accept {}_{}.bam, {}_{}.png mix pattern
+                    compose(f, """%s_group = []""" % o.identifier)
+                    patterns = o.pattern.split(";")
+                    for index in range(len(patterns)):
+                        pattern = patterns[index].strip()
+                        if len(pattern) == 0:
+                            continue
+
+                        ## begin, single file trans
+                        m11 = re.findall(r"{(\S):(\w+\[?\d?\]?\w*)}", pattern)
+                        if len(m11) == 0:
+                            compose(f, """%s_%s_dir_filename = os.path.join(%s_dir_name,'%s')""" %(o.identifier, index, o.identifier, pattern))
+                        else:
+                            name_base = "%s_%s_base" % (o.identifier, index)
+                            compose(f, """%s = []""" % name_base)
+                            name_suffix = "%s_%s_suffix" % (o.identifier, index)
+                            compose(f, """%s = '%s'""" % (name_suffix, re.match(r"\S+\.(\w+)",pattern).group(1)))
+                            for c, n in m11:
+                                # inputs
+                                if "I" in c:
+                                    if "__" in n:
+                                        m111 = re.match(r"\S*:(\w+\[?\d?\]?\w*)__(\w+)", pattern)
+                                        if m111:
+                                            pri = m111.group(1)
+                                            cov = m111.group(2)
+                                        # it's prefix of input file name
+                                        if "prefix" in cov:
+                                            compose(f, """%s.append(os.path.basename(self.inputs.%s).split(".")[0])""" % (name_base, pri))
+                                        # it's meta
+                                        else:
+                                            compose(f, """%s.append(self.inputs.%s.meta.get('%s','NA'))""" % (name_base, pri, cov))
+                                # params
+                                elif "P" in c:
+                                    compose(f, """%s.append(self.params.%s)""" % (name_base, n))
+
+                            compose(f, """%s_%s_filename = "_".join(%s) + "." + %s""" % (o.identifier, index, name_base, name_suffix))
+                            compose(f, """%s_group.append(os.path.join(%s_dir_name,%s_%s_filename))""" % (o.identifier, o.identifier, o.identifier, index))
+
+                    compose(f, """config.write("%s=%%s\\n" %% str(%s_group)) """ % (o.identifier, o.identifier))
+                    manifest[o.identifier] = "%s_group" % o.identifier
+
+                        ## end
+
+                    manifest[o.identifier] = "[%s]" % ",".join(["%s_%s_filename" % (o.identifier,  i) for i in range(len(patterns))])
+# single file
+            else:
+
+                m2 = re.findall(r"{(\S):(\w+\[?\d?\]?\w*)}", o.pattern)
+
+                # plain name, e.g. linrc.txt
+                if len(m2) == 0:
+                    compose(f, """%s_filename = '%s'""" %(o.identifier, o.pattern))
+
+                # {from:var}.suffix
+                # re =>[('I', 'fq__prefix'), ('I', 'fq__lib')]
+                else:
+                    name_base = "%s_base" % o.identifier
+                    compose(f, """%s = []""" % name_base)
+                    name_suffix = "%s_suffix" % o.identifier
+                    compose(f, """%s = '%s'""" % (name_suffix, re.match(r"\S+\.(\w+)", o.pattern).group(1)))
+                    for c, n in m2:
+                        # inputs
+                        if "I" in c:
+                            if "__" in n:
+                                m3 = re.match(r"\S*:(\w+\[?\d?\]?\w*)__(\w+)", o.pattern)
+                                if m3:
+                                    pri = m3.group(1)
+                                    cov = m3.group(2)
+                                # it's prefix of input file name
+                                if "prefix" in cov:
+                                    compose(f, """%s.append(os.path.basename(self.inputs.%s).split(".")[0])""" % (name_base, pri))
+                                # it's meta
+                                else:
+                                    compose(f, """%s.append(self.inputs.%s.meta.get('%s','NA'))""" % (name_base, pri, cov))
+                        # params
+                        elif "P" in c:
+                            compose(f, """%s.append(self.params.%s)""" % (name_base, n))
+                    compose(f, """%s_filename = "_".join(%s) + "." + %s """ % (o.identifier, name_base, name_suffix))
+                    # compose(f, """config.write("%s=%%s" %% %s_filename )""" % (o.identifier, o.identifier))
+                compose(f, """%s_dir_filename = os.path.join(%s_dir_name, %s_filename)""" % (o.identifier, o.identifier, o.identifier))
+                compose(f, """config.write("%s=%%s\\n" %% %s_dir_filename)""" % (o.identifier, o.identifier))
+                manifest[o.identifier] = "%s_dir_filename" % o.identifier
+
+    compose(f, """config.close()""", interval=3)
+    compose(f, """Process("/opt/bin/%s", "__config__.txt", "./", stdout="__run.sh__").run()""" % tool.program)
+    compose(f, """Process("__run.sh__").run()""",interval=2)
+    for k, v in manifest.items():
+        compose(f, """self.outputs.%s = %s""" % (k, v),interval=2)
+
+    f.close()
+    CODE_INDENT_INDEX = 0
+#    return wrapper_file
+
+def build_skeleton(wd, tool_id):
+    tool = Tool.objects.get(id=tool_id)
+    with open(os.path.join(wd, "description.txt"), "w") as desc:
+        desc.write("%s\n" % tool.description.replace(r"\r\n",""))
+
+    with open(os.path.join(wd, "push.sh"), "w") as desc:
+        desc.write("l3 push %s %s $1\n" % (tool.name, tool.version))
+
+    with open(os.path.join(wd, tool.name.lower(), "__init__.py"), "w") as init:
+        init.write("from %s import %s\n" % (tool.name.lower(), tool.name.upper() ))
+
+    with open(os.path.join(wd,"test.sh"),"w") as run:
+        run.write("rm -rf results && l3 run %s.%s input.json\n" % (tool.name.lower(), tool.name.upper()))
+
+
+        
+    with open(os.path.join(wd, "input.json"), "w") as input_json:
+        input_json.write("""
+{
+    "$inputs":{
+    }
+    "$params":{
+    }
+}
+        """)
+
+
+
+
