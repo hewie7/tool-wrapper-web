@@ -80,12 +80,10 @@ def list_tools(request):
     username = request.user.username
     query = request.GET.get('query')
     if query is not None:
-        lines = Tool.objects.filter(Q(deleted=0), Q(name__icontains=query) | Q(program__icontains=query) | Q(description__icontains=query)
-        #)
-        | Q(author__username__icontains=query))
-        #| Q(create_time__icontains=query) | Q(modify_time__icontains=query))
+        lines = Tool.objects.filter(Q(deleted=0), Q(author__username=username), Q(name__icontains=query) | Q(program__icontains=query) | Q(description__icontains=query)
+        )
     else:
-        lines = Tool.objects.filter(deleted=0).order_by("-id")
+        lines = Tool.objects.filter(deleted=0, author__username=username).order_by("-id")
     paginator = Paginator(lines, 10)
     page = request.GET.get('page')
     # return HttpResponse("<h1>%s</h1>" % page)
