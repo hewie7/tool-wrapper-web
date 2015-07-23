@@ -171,7 +171,8 @@ def code_generator(wd, tool_id):
                 compose(f, """list_file.close()""")
                 #compose(f, retract=True)
             else:
-                compose(f, """config.write("%s=%%s\\n" %% self.inputs.%s)""" % (i.identifier, i.identifier))
+                compose(f, """%s_meta = ','.join(['%%s:%%s' %% (k,v) for k,v in self.inputs.%s.meta.items()])""" % (i.identifier, i.identifier))
+                compose(f, """config.write("%s=%%s\\t %%s\\n" %% (self.inputs.%s, %s_meta ))""" % (i.identifier, i.identifier, i.identifier))
 
     # references
     if len(references) > 0:
