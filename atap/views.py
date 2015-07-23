@@ -26,6 +26,14 @@ from .wrap import *
 import subprocess
 WD ="/rd/workspace/"
 
+def check_permission(tool, login_username):
+    if User.objects.get(username=login_username).is_staff:
+        return True
+    elif tool.author.username == login_username:
+        return True
+    else:
+        return False
+
 def tool_change_log(tool_id):
     tool = Tool.objects.get(id=tool_id)
     tool.modify_time = datetime.datetime.now()
@@ -84,11 +92,18 @@ def list_tools(request):
 
     username = request.user.username
     query = request.GET.get('query')
+    is_admin = bool(User.objects.get(username=username).is_staff)
     if query is not None:
-        lines = Tool.objects.filter(Q(deleted=0), Q(author__username=username), Q(name__icontains=query) | Q(program__icontains=query) | Q(description__icontains=query)
-        )
+        if is_admin:
+            lines = Tool.objects.filter(Q(deleted=0), Q(name__icontains=query) | Q(program__icontains=query) | Q(description__icontains=query)
+        ).order_by("-id", "-modify_time")
+        else:
+            lines = Tool.objects.filter(Q(deleted=0),Q(author__username=username) , Q(name__icontains=query) | Q(program__icontains=query) | Q(description__icontains=query)).order_by("-id", "-modify_time")
     else:
-        lines = Tool.objects.filter(deleted=0, author__username=username).order_by("-id")
+        if is_admin:
+            lines = Tool.objects.filter(deleted=0).order_by("-id", "-modify_time")
+        else:
+            lines = Tool.objects.filter(deleted=0, author__username=username).order_by("-id", "-modify_time")
     paginator = Paginator(lines, 10)
     page = request.GET.get('page')
     # return HttpResponse("<h1>%s</h1>" % page)
@@ -167,7 +182,7 @@ def add_tool(request):
 def modify_tool(request, tid):
     username = request.user.username
     tool = Tool.objects.get(id=tid)
-    if tool.author.username != username:
+    if not check_permission(tool, username):
         return render_to_response("401.html", RequestContext(request))
 
     if request.method == "GET":
@@ -215,9 +230,8 @@ def add_input(request, tool_id):
             continue
         refs.append(re.split("\s+", line)[-1])
 
-    if tool.author.username != username:
+    if not check_permission(tool, username):
         return render_to_response("401.html", RequestContext(request))
-
 
     if request.method == 'GET':
         form = InputForm()
@@ -249,7 +263,7 @@ def delete_input(request, tool_id, input_id):
     username = request.user.username
     tool = Tool.objects.get(id=tool_id)
     input = Input.objects.get(id=input_id)
-    if tool.author.username != username:
+    if not check_permission(tool, username):
         return render_to_response("401.html", RequestContext(request))
     input.deleted = True
     input.save()
@@ -264,8 +278,10 @@ def modify_input(request, tool_id, input_id):
     username = request.user.username
     tool = Tool.objects.get(id=tool_id)
     input = Input.objects.get(id=input_id)
-    if tool.author.username != username:
+
+    if not check_permission(tool, username):
         return render_to_response("401.html", RequestContext(request))
+
     refs = []
     #todo add reference here
     for line in os.popen("/usr/local/bin/list-refs"):
@@ -315,7 +331,8 @@ def add_param(request, tool_id):
 
     username = request.user.username
     tool = Tool.objects.get(id=tool_id)
-    if tool.author.username != username:
+
+    if not check_permission(tool, username):
         return render_to_response("401.html", RequestContext(request))
 
     if request.method == 'GET':
@@ -340,7 +357,7 @@ def add_param(request, tool_id):
             if max_value == "":
                 max_value = None
 
-    
+
         form = ParamForm(request.POST)
         if form.is_valid():
             param = Param.objects.create(
@@ -369,7 +386,8 @@ def modify_param(request, tool_id, param_id):
     username = request.user.username
     tool = Tool.objects.get(id=tool_id)
     param = Param.objects.get(id=param_id)
-    if tool.author.username != username:
+
+    if not check_permission(tool, username):
         return render_to_response("401.html", RequestContext(request))
 
     enums = []
@@ -436,7 +454,7 @@ def delete_param(request, tool_id, param_id):
     username = request.user.username
     tool = Tool.objects.get(id=tool_id)
     param = Param.objects.get(id=param_id)
-    if tool.author.username != username:
+    if not check_permission(tool, username):
         return render_to_response("401.html", RequestContext(request))
     param.deleted = True
     param.save()
@@ -453,9 +471,8 @@ def add_output(request, tool_id):
     tool = Tool.objects.get(id=tool_id)
     inputs = tool.input_set.all().filter(deleted=0)
     params = tool.param_set.all().filter(deleted=0)
-    if tool.author.username != username:
+    if not check_permission(tool, username):
         return render_to_response("401.html", RequestContext(request))
-
     choice=[]
     choice.append(("*","*"))
     choice.append(("prefix","prefix"))
@@ -508,8 +525,7 @@ def modify_output(request, tool_id, output_id):
     inputs = tool.input_set.all().filter(deleted=0)
     params = tool.param_set.all().filter(deleted=0)
 
-    if tool.author.username != username:
-        return render_to_response("401.html", RequestContext(request))
+
     choice=[]
     choice.append((".","."))
     choice.append(("*","*"))
@@ -517,7 +533,7 @@ def modify_output(request, tool_id, output_id):
     choice.append(("sample","sample"))
     choice.append(("library","library"))
     choice.append(("lane","lane"))
-    
+
     for i in inputs:
         choice.append(("%s" % i.identifier, "%s" % i.name))
     for p in params:
@@ -564,7 +580,7 @@ def delete_output(request, tool_id, output_id):
     tool = Tool.objects.get(id=tool_id)
     output = Output.objects.get(id=output_id)
 
-    if tool.author.username != username:
+    if not check_permission(tool, username):
         return render_to_response("401.html", RequestContext(request))
 
     output.deleted =True
@@ -578,12 +594,13 @@ def init(request, tool_id):
     username = request.user.username
     tool = Tool.objects.get(id=tool_id)
     author = tool.author.username
-    if username != author:
+
+    if not check_permission(tool, username):
         return render_to_response("401.html", RequestContext(request))
 
     user_space = os.path.join(WD, username)
     wd = os.path.join(WD, author,tool.name)
-    if tool.state == "pending": 
+    if tool.state == "pending":
         if not os.path.exists(wd):
             os.makedirs(wd)
         os.chdir(user_space)
@@ -603,7 +620,8 @@ def init(request, tool_id):
 def delete_tool(request,tid):
     username = request.user.username
     tool = Tool.objects.get(id=tid)
-    if tool.author.username != username:
+
+    if not check_permission(tool, username):
         return render_to_response("401.html", RequestContext(request))
 
     wd = os.path.join(WD, tool.author.username,tool.name)
