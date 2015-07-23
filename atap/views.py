@@ -26,6 +26,11 @@ from .wrap import *
 import subprocess
 WD ="/rd/workspace/"
 
+def tool_change_log(tool_id):
+    tool = Tool.objects.get(id=tool_id)
+    tool.modify_time = datetime.datetime.now()
+    tool.save()
+
 
 def login(request):
     if request.method == 'GET':
@@ -192,6 +197,8 @@ def modify_tool(request, tid):
             tool.mem = t_form.cleaned_data.get("mem")
             tool.disk_space = t_form.cleaned_data.get("disk_space")
             tool.save()
+
+            tool_change_log(tool_id)
             return HttpResponseRedirect(reverse("tool-detail-page", args=(tool.id,)))
         else:
             return render_to_response("tool.html", RequestContext(request, {'form': t_form}))
@@ -231,6 +238,7 @@ def add_input(request, tool_id):
             )
             input.save()
 
+            tool_change_log(tool_id)
             return HttpResponseRedirect(reverse("tool-detail-page", args=(tool_id,)))
 
         else:
@@ -246,6 +254,7 @@ def delete_input(request, tool_id, input_id):
     input.deleted = True
     input.save()
 
+    tool_change_log(tool_id)
     return HttpResponseRedirect(reverse("tool-detail-page", args=(tool_id,)))
 
 
@@ -293,6 +302,7 @@ def modify_input(request, tool_id, input_id):
             # input.list_cols = form.cleaned_data.get("list_cols")
             input.save()
 
+            tool_change_log(tool_id)
             return HttpResponseRedirect(reverse("tool-detail-page", args=(tool_id,)))
 
         else:
@@ -347,6 +357,7 @@ def add_param(request, tool_id):
             )
             param.save()
 
+            tool_change_log(tool_id)
             return HttpResponseRedirect(reverse("tool-detail-page", args=(tool_id,)))
 
         else:
@@ -413,6 +424,7 @@ def modify_param(request, tool_id, param_id):
             param.max_value = max_value
             param.save()
 
+            tool_change_log(tool_id)
             return HttpResponseRedirect(reverse("tool-detail-page", args=(tool_id,)))
 
         else:
@@ -429,6 +441,7 @@ def delete_param(request, tool_id, param_id):
     param.deleted = True
     param.save()
 
+    tool_change_log(tool_id)
     return HttpResponseRedirect(reverse("tool-detail-page", args=(tool_id,)))
 
 
@@ -480,6 +493,7 @@ def add_output(request, tool_id):
             )
             output.save()
 
+            tool_change_log(tool_id)
             return HttpResponseRedirect(reverse("tool-detail-page", args=(tool_id,)))
 
         else:
@@ -538,6 +552,7 @@ def modify_output(request, tool_id, output_id):
             output.pattern = request.POST.get("pattern")
             output.save()
 
+            tool_change_log(tool_id)
             return HttpResponseRedirect(reverse("tool-detail-page", args=(tool_id,)))
 
         else:
@@ -554,6 +569,7 @@ def delete_output(request, tool_id, output_id):
 
     output.deleted =True
     output.save()
+    tool_change_log(tool_id)
     return HttpResponseRedirect(reverse("tool-detail-page", args=(tool_id,)))
 
 
@@ -578,6 +594,7 @@ def init(request, tool_id):
     tool.state = "inited"
     tool.save()
 
+    tool_change_log(tool_id)
     return render_to_response("init.html", RequestContext(request, {"tool":tool}))
     #return HttpResponse("""<script type="text/JavaScript">alert("SUCCESS"); </script>""")
 

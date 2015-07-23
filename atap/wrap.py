@@ -223,6 +223,7 @@ def code_generator(wd, tool_id):
                 if len(m) == 0:
                     if "*" in pattern:
                         segments[index] = "glob.glob('%s')" % os.path.join(out_dir, pattern)
+                        metadata = "*"
                     else:
                         segments[index] = "'%s'" % os.path.join(out_dir, pattern)
                 else:
@@ -311,6 +312,10 @@ def code_generator(wd, tool_id):
             meta = meta_vars[0]
             if meta is None:
                 compose(f, """self.outputs.%s.meta = self.inputs.%s.make_metadata()""" % (k, inherit_meta['none']) )
+            elif meta == "*":
+                compose(f, """for o in self.outputs.%s:""" % k)
+                compose(f, """o.meta = self.inputs.%s.make_metadata()""" % inherit_meta['none'],indent=True) 
+                compose(f, retract=True)
             else:
                 compose(f, """self.outputs.%s.meta = self.inputs.%s.make_metadata()""" % (k, re.sub(r"\[\d\]","",meta)))
         else:
