@@ -62,11 +62,11 @@ WSGI_APPLICATION = 'app_uploader.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'appup',
-        'USER': 'app',
-        'PASSWORD': 'uxvgqw',
-        'HOST': '52.0.128.179',
-        'PORT': '3306',
+        'NAME': '',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': '',
+        'PORT': '',
     }
 }
 
