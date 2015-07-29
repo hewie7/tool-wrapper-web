@@ -83,10 +83,10 @@ def code_generator(wd, tool_id):
     # reference
     if len(references) >0:
         compose(f, "", retract=True)
-        compose(f, 'class Reference(define.References):', indent=True)
+        compose(f, 'class References(define.References):')
         compose(f, indent=True)
         for r in references:
-            define_str = """%s = define.reference(name="%s", links="s3://bgionline-tool-refs/%s",list=False""" % (r.identifier, r.name, r.ref_file)
+            define_str = """%s = define.reference(name="%s", links="s3://bgionline-tool-refs/%s",list=False)""" % (r.identifier, r.name, r.ref_file)
             compose(f, define_str)
 
     # outputs
@@ -172,12 +172,12 @@ def code_generator(wd, tool_id):
                 #compose(f, retract=True)
             else:
                 compose(f, """%s_meta = ','.join(['%%s:%%s' %% (k,v) for k,v in self.inputs.%s.meta.items()])""" % (i.identifier, i.identifier))
-                compose(f, """config.write("%s=%%s\\t %%s\\n" %% (self.inputs.%s, %s_meta ))""" % (i.identifier, i.identifier, i.identifier))
+                compose(f, """config.write("%s=%%s\\t%%s\\n" %% (self.inputs.%s, %s_meta ))""" % (i.identifier, i.identifier, i.identifier))
 
     # references
     if len(references) > 0:
         compose(f, """config.write("\\n[reference]\\n")""")
-        compose(f, """config.write("%s=./database/%s/")""" % (r.identifier, r.identifier))
+        compose(f, """config.write("%s=./database/%s/\\n")""" % (r.identifier, r.identifier))
 
     # $params
     if len(params) > 0:
@@ -257,6 +257,9 @@ def code_generator(wd, tool_id):
     compose(f, """config.close()""", interval=3)
 
     for r in references:
+        compose(f, """if not os.path.exists("./database/%s/"):""" % r.identifier)
+        compose(f, """os.makedirs("./database/%s/")""" % r.identifier, indent=True)
+        compose(f, "",retract=True)
         compose(f, """Process("tar","xvf", self.references.%s, "-C", "./database/%s/").run() """ % (r.identifier, r.identifier))
 
     compose(f, """Process("perl","/opt/bin/%s", "-conf", "__config__.txt", "-outdir", "./", stdout="__run__.sh").run()""" % tool.program)
@@ -331,7 +334,7 @@ def code_generator(wd, tool_id):
 
 def build_skeleton(wd, tool_id):
     tool = Tool.objects.get(id=tool_id)
-    inputs = tool.input_set.all().filter(deleted=0)
+    inputs = tool.input_set.all().filter(deleted=0, ref_mark=0)
     params = tool.param_set.all().filter(deleted=0)
 
     with open(os.path.join(wd, "description.txt"), "w") as desc:

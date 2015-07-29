@@ -635,3 +635,7 @@ def delete_tool(request,tid):
 def test(request):
 
     return render_to_response("test.html",RequestContext(request,{}))
+
+def docs(request):
+    return render_to_response("doc.html",RequestContext(request, {}))
+

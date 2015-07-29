@@ -12,6 +12,7 @@ urlpatterns = patterns('',
     (r'^accounts/logout/$', "atap.views.logout"),
     (r'^accounts/changepwd/$', 'atap.views.changepwd'),
 
+    url(r'^docs/$', 'atap.views.docs', name="help-page"),
     url(r'^tools/$', 'atap.views.list_tools', name="tool-list-page"),
     url(r'^tool/add/$', 'atap.views.add_tool', name="tool-add-page"),
     url(r'^tool/(\d+)/$', 'atap.views.modify_tool', name='tool-modify-page'),
