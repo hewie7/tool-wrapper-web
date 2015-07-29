@@ -332,6 +332,8 @@ def code_generator(wd, tool_id):
                     compose(f, retract=True)
                 else:
                     compose(f, """self.outputs.%s[%s].meta = self.inputs.%s.make_metadata()""" % (k, ix, meta))
+
+                # compose(f, """self.outputs.%s[%s].meta = self.inputs.%s.make_metadata()""" % (k, ix, meta))
         compose(f, "")
 
     f.close()
