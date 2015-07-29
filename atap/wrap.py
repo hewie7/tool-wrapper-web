@@ -327,7 +327,7 @@ def code_generator(wd, tool_id):
                 if meta is None:
                     compose(f, """self.outputs.%s[%s].meta = self.inputs.%s.make_metadata()""" % (k, ix, inherit_meta['none']) )
                 elif meta == "*":
-                    compose(f, """for o in self.outputs.%s[%s]:""" % (k, ix))
+                    compose(f, """for o in self.outputs.%s:""" % k)
                     compose(f, """o.meta = self.inputs.%s.make_metadata()""" % inherit_meta['none'], indent=True)
                     compose(f, retract=True)
                 else:
